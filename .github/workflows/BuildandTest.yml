@@ -5,15 +5,12 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - '**/Log78/Log78.csproj'  
   pull_request:
     branches:
       - main
 
 jobs:
   build-and-test:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -38,11 +35,13 @@ jobs:
 
     - name: Run tests
       run: |
-        dotnet test ./tests/Log78.Tests/test.csproj --configuration Release --no-build --logger "trx;LogFileName=testresults.trx" --results-directory ./tests/TestResults
-        if [ $? -ne 0 ]; then
-          dotnet test ./tests/Log78.Tests/test.csproj --help
-          exit 1
-        fi
+        for testProject in $(find ./tests -name "*.csproj"); do
+          dotnet test $testProject --configuration Release --no-build --logger "trx;LogFileName=testresults.trx" --results-directory ./tests/TestResults
+          if [ $? -ne 0 ]; then
+            dotnet test $testProject --help
+            exit 1
+          fi
+        done
 
     - name: Publish test results
       uses: EnricoMi/publish-unit-test-result-action@v2
@@ -50,15 +49,17 @@ jobs:
       with:
         files: './tests/TestResults/*.trx'
 
-    - name: Pack project for .NET Framework 4.8
-      run: dotnet pack ./src/Log78/Log78.csproj -c Release -p:TargetFramework=net48 --output ./artifacts --include-symbols
-
-    - name: Pack project for .NET 6.0
-      run: dotnet pack ./src/Log78/Log78.csproj -c Release -p:TargetFramework=net6.0 --output ./artifacts --include-symbols
+    - name: Pack projects
+      run: |
+        for project in $(find ./src -name "*.csproj"); do
+          dotnet pack $project -c Release --output ./artifacts --include-symbols
+        done
 
     - name: Publish to NuGet
       run: |
-        dotnet nuget push ./artifacts/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        for package in ./artifacts/*.nupkg; do
+          dotnet nuget push $package --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        done
 
     - name: List files in artifacts directory
       run: ls -la ./artifacts
