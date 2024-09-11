@@ -1,0 +1,63 @@
+# 构建结果
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio 文件
+.vs/
+*.user
+*.userosscache
+*.sln.docstates
+
+# Visual Studio Code 文件
+.vscode/
+
+# ReSharper 文件
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# NuGet 包
+*.nupkg
+# NuGet Symbol 包
+*.snupkg
+# 包文件夹
+[Pp]ackages/
+
+# 测试结果
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+
+# .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# 其他
+*.swp
+*.*~
+project.lock.json
+.DS_Store
+*.pyc
+nupkg/
+
+# 自动生成的文件
+Generated_Code/
+
+# 本地配置文件
+appsettings.Development.json
+
+# 日志文件
+*.log
+
+# 临时文件
+*.tmp
+*.temp
