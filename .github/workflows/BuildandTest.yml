@@ -1,0 +1,65 @@
+# .github/workflows/BuildandTest.yml
+name: Build and Test
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**/Log78/Log78.csproj'  
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 
+
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build solution
+      run: dotnet build --configuration Release --no-restore
+
+    - name: Create TestResults directory
+      run: mkdir -p ./tests/TestResults
+
+    - name: Run tests
+      run: |
+        dotnet test ./tests/Log78.Tests/test.csproj --configuration Release --no-build --logger "trx;LogFileName=testresults.trx" --results-directory ./tests/TestResults
+        if [ $? -ne 0 ]; then
+          dotnet test ./tests/Log78.Tests/test.csproj --help
+          exit 1
+        fi
+
+    - name: Publish test results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: './tests/TestResults/*.trx'
+
+    - name: Pack project for .NET Framework 4.8
+      run: dotnet pack ./src/Log78/Log78.csproj -c Release -p:TargetFramework=net48 --output ./artifacts --include-symbols
+
+    - name: Pack project for .NET 6.0
+      run: dotnet pack ./src/Log78/Log78.csproj -c Release -p:TargetFramework=net6.0 --output ./artifacts --include-symbols
+
+    - name: Publish to NuGet
+      run: |
+        dotnet nuget push ./artifacts/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+    - name: List files in artifacts directory
+      run: ls -la ./artifacts
+

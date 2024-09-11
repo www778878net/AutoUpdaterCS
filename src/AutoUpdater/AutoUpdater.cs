@@ -7,7 +7,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace AutoUpdaterNamespace
+namespace AutoUpdaterLib
 {
     public class AutoUpdater
     {
@@ -17,13 +17,13 @@ namespace AutoUpdaterNamespace
         private HttpClient _httpClient;
         private readonly string _updateUrl;
 
-        public AutoUpdater(string localDirectory, string remoteBaseUrl, string updateUrl)
+        public AutoUpdater(string localDirectory, string remoteBaseUrl)
         {
             _localDirectory = localDirectory;
             _remoteBaseUrl = remoteBaseUrl;
             _remoteMd5Url = new Uri(new Uri(remoteBaseUrl), "md5.json").ToString();
             _httpClient = new HttpClient();
-            _updateUrl = updateUrl;
+            _updateUrl = remoteBaseUrl;
             Console.WriteLine($"AutoUpdater initialized with update URL: {_updateUrl}");
         }
 
@@ -47,7 +47,7 @@ namespace AutoUpdaterNamespace
             {
                 if (Path.GetFileName(file) != "md5.json")
                 {
-                    var relativePath = Path.GetRelativePath(directory, file);
+                    var relativePath = file.Substring(directory.Length).TrimStart(Path.DirectorySeparatorChar);
                     fileList[relativePath] = CalculateFileMd5(file);
                 }
             }
@@ -63,21 +63,22 @@ namespace AutoUpdaterNamespace
             return outputPath;
         }
 
-        private async Task DownloadFileAsync(string url, string filepath)
+        private void DownloadFile(string url, string filepath)
         {
-            var response = await _httpClient.GetByteArrayAsync(url);
+            var response = _httpClient.GetByteArrayAsync(url).Result;
             var directoryName = Path.GetDirectoryName(filepath);
             if (!string.IsNullOrEmpty(directoryName))
             {
                 Directory.CreateDirectory(directoryName);
             }
-            await File.WriteAllBytesAsync(filepath, response);
+            File.WriteAllBytes(filepath, response);
         }
 
         public async Task<string> UpdateFilesAsync()
         {
             try
             {
+                Console.WriteLine($"Checking for updates at {_updateUrl}");
                 Dictionary<string, string>? remoteMd5List = null;
                 try
                 {
@@ -98,14 +99,16 @@ namespace AutoUpdaterNamespace
                 var localMd5List = GetFileListWithMd5(_localDirectory);
 
                 var updatedFiles = new List<string>();
-                foreach (var (filepath, remoteMd5) in remoteMd5List)
+                foreach (var kvp in remoteMd5List)
                 {
+                    string filepath = kvp.Key;
+                    string remoteMd5 = kvp.Value;
                     var localFilepath = Path.Combine(_localDirectory, filepath);
                     if (!localMd5List.ContainsKey(filepath) || localMd5List[filepath] != remoteMd5)
                     {
                         Console.WriteLine($"Updating file: {filepath}");
                         var remoteFileUrl = new Uri(new Uri(_remoteBaseUrl), filepath).ToString();
-                        await DownloadFileAsync(remoteFileUrl, localFilepath);
+                        DownloadFile(remoteFileUrl, localFilepath);
                         updatedFiles.Add(filepath);
                     }
                 }
@@ -157,6 +160,7 @@ namespace AutoUpdaterNamespace
         {
             try
             {
+                Console.WriteLine($"Checking for updates at {_updateUrl}");
                 var response = await _httpClient.GetStringAsync(_remoteMd5Url);
                 var remoteMd5List = JsonSerializer.Deserialize<Dictionary<string, string>>(response);
                 if (remoteMd5List == null)
@@ -166,8 +170,10 @@ namespace AutoUpdaterNamespace
 
                 var localMd5List = GetFileListWithMd5(_localDirectory);
 
-                foreach (var (filepath, remoteMd5) in remoteMd5List)
+                foreach (var kvp in remoteMd5List)
                 {
+                    string filepath = kvp.Key;
+                    string remoteMd5 = kvp.Value;
                     if (filepath != "md5.json")
                     {
                         if (!localMd5List.ContainsKey(filepath) || localMd5List[filepath] != remoteMd5)
