@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\AutoUpdater\AutoUpdater.csproj" />
+    <ProjectReference Include="..\..\src\AutoUpdaterCs\AutoUpdaterCs.csproj" />
   </ItemGroup>
 
 </Project>
